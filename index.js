@@ -33,7 +33,7 @@ async function run() {
   try {
 
 
-    // const craftCollection = client.db("craftDB").collection('craft');
+    const mediCollection = client.db("MediDB").collection('medicine');
     // const categoryCollection = client.db("craftDB").collection('category');
 
     // app.get('/craft', async (req, res) => {
@@ -53,12 +53,16 @@ async function run() {
     //   const result = await craftCollection.find({ email: req.params.email }).toArray();
     //   res.send(result)
     // })
-
-    // app.get("/category/:No", async (req, res) => {
-    //   console.log(req.params.No);
-    //   const result = await categoryCollection.find({ No: req.params.No }).toArray();
-    //   res.send(result)
-    // })
+    app.get('/category', async (req, res) => {
+      const cursor = mediCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get("/category/:no", async (req, res) => {
+      console.log(req.params.no);
+      const result = await mediCollection.find({ no: req.params.no }).toArray();
+      res.send(result)
+    })
     
     // app.get('/categoryNo/:id', async (req, res) => {
     //   const id = req.params.id;
@@ -74,12 +78,12 @@ async function run() {
     //   const result = await craftCollection.insertOne(newCraft);
     //   res.send(result);
     // })
-    // app.post('/category', async (req, res) => {
-    //   const newCraft = req.body;
-    //   console.log(newCraft);
-    //   const result = await categoryCollection.insertOne(newCraft);
-    //   res.send(result);
-    // })
+    app.post('/category', async (req, res) => {
+      const newMedi = req.body;
+      console.log(newMedi);
+      const result = await mediCollection.insertOne(newMedi);
+      res.send(result);
+    })
     // app.delete('/craft/:id', async (req, res) => {
     //   const id = req.params.id;
     //   const query = { _id: new ObjectId(id) }

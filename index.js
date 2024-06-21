@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config()
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
@@ -36,6 +37,50 @@ async function run() {
     const mediCollection = client.db("MediDB").collection('medicine');
     const cartCollection = client.db("MediDB").collection('carts');
     const usercollection = client.db("MediDB").collection('users');
+
+    // JWT related Api
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+      res.send({ token });
+    })
+
+    // Middlewares
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'unauthorized access' });
+      }
+      const token = req.headers.authorization.split(' ')[1]
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: 'unauthorized access' });
+        }
+        req.decoded = decoded;
+        next();
+      })
+    }
+
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usercollection.findOne(query);
+      const isAdmin = user.role === 'admin';
+      if (!isAdmin) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    }
+
+    const verifySeller = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usercollection.findOne(query);
+      const isSeller = user.role === 'seller';
+      if (!isSeller) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    }
     // const categoryCollection = client.db("craftDB").collection('category');
 
     // app.get('/craft', async (req, res) => {
@@ -90,6 +135,53 @@ async function run() {
     app.get('/users',async (req, res) => {
       const result = await usercollection.find().toArray();
       res.send(result);
+    })
+
+    app.get('/users/:email', verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const result = await usercollection.findOne(email);
+      res.send(result);
+    })
+
+    app.get('/users/admin/:email', verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      const query = { email: email };
+      const user = await usercollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === 'admin';
+      }
+      res.send({ admin });
+    })
+
+    app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const update = req.body;
+      const updateduser = {
+        $set: {
+          role: update.role
+        }
+      }
+      const result = await usercollection.updateOne(filter, updateduser);
+      res.send(result);
+    })
+
+    app.get('/users/seller/:email', verifyToken, verifySeller, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      const query = { email: email };
+      const user = await usercollection.findOne(query);
+      let seller = false;
+      if (user) {
+        seller = user?.role === 'seller';
+      }
+      res.send({ seller });
     })
 
     app.post('/category', async (req, res) => {

@@ -35,6 +35,7 @@ async function run() {
 
     const mediCollection = client.db("MediDB").collection('medicine');
     const cartCollection = client.db("MediDB").collection('carts');
+    const usercollection = client.db("MediDB").collection('users');
     // const categoryCollection = client.db("craftDB").collection('category');
 
     // app.get('/craft', async (req, res) => {
@@ -86,6 +87,11 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/users',async (req, res) => {
+      const result = await usercollection.find().toArray();
+      res.send(result);
+    })
+
     app.post('/category', async (req, res) => {
       const newMedi = req.body;
       console.log(newMedi);
@@ -96,6 +102,17 @@ async function run() {
     app.post('/carts',async (req,res) =>{
       const cartItem =req.body;
       const result = await cartCollection.insertOne(cartItem);
+      res.send(result);
+    })
+
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email }
+      const existingUser = await usercollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: 'user already exists', insertedId: null })
+      }
+      const result = await usercollection.insertOne(user);
       res.send(result);
     })
 

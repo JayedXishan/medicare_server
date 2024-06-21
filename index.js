@@ -34,6 +34,7 @@ async function run() {
 
 
     const mediCollection = client.db("MediDB").collection('medicine');
+    const cartCollection = client.db("MediDB").collection('carts');
     // const categoryCollection = client.db("craftDB").collection('category');
 
     // app.get('/craft', async (req, res) => {
@@ -78,12 +79,24 @@ async function run() {
     //   const result = await craftCollection.insertOne(newCraft);
     //   res.send(result);
     // })
+    app.get('/carts',async(req,res)=>{
+      const result = await cartCollection.find().toArray();
+      res.send(result);
+    })
+
     app.post('/category', async (req, res) => {
       const newMedi = req.body;
       console.log(newMedi);
       const result = await mediCollection.insertOne(newMedi);
       res.send(result);
     })
+
+    app.post('/carts',async (req,res) =>{
+      const cartItem =req.body;
+      const result = await cartCollection.insertOne(cartItem);
+      res.send(result);
+    })
+
     // app.delete('/craft/:id', async (req, res) => {
     //   const id = req.params.id;
     //   const query = { _id: new ObjectId(id) }

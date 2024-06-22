@@ -111,7 +111,13 @@ async function run() {
       const result = await mediCollection.find({ no: req.params.no }).toArray();
       res.send(result)
     })
-    
+    app.get('/category/seller/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await mediCollection.find(query).toArray();
+      console.log('email :', result);
+      res.send(result);
+    })
     // app.get('/categoryNo/:id', async (req, res) => {
     //   const id = req.params.id;
     //   const query = { _id: new ObjectId(id) }

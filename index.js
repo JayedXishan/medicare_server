@@ -37,6 +37,7 @@ async function run() {
     const mediCollection = client.db("MediDB").collection('medicine');
     const cartCollection = client.db("MediDB").collection('carts');
     const usercollection = client.db("MediDB").collection('users');
+    const bannerCollection = client.db("MediDB").collection('banners');
 
     // JWT related Api
     app.post('/jwt', async (req, res) => {
@@ -184,6 +185,12 @@ async function run() {
       res.send({ seller });
     })
 
+    app.get('/addbanner', async (req, res) => {
+      const cursor = bannerCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
     app.post('/category', async (req, res) => {
       const newMedi = req.body;
       console.log(newMedi);
@@ -196,7 +203,11 @@ async function run() {
       const result = await cartCollection.insertOne(cartItem);
       res.send(result);
     })
-
+    app.post('/addbanner',async (req,res) =>{
+      const bannerItem =req.body;
+      const result = await bannerCollection.insertOne(bannerItem);
+      res.send(result);
+    })
     app.post('/users', async (req, res) => {
       const user = req.body;
       const query = { email: user.email }

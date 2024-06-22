@@ -38,6 +38,7 @@ async function run() {
     const cartCollection = client.db("MediDB").collection('carts');
     const usercollection = client.db("MediDB").collection('users');
     const bannerCollection = client.db("MediDB").collection('banners');
+    const paymentCollection = client.db("MediDB").collection('payments');
 
     // JWT related Api
     app.post('/jwt', async (req, res) => {
@@ -101,6 +102,25 @@ async function run() {
     //   const result = await craftCollection.find({ email: req.params.email }).toArray();
     //   res.send(result)
     // })
+    app.get('/payment', async (req, res) => {
+      const cursor = paymentCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get('/payment/buyer/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = { buyer_email: email };
+      const result = await paymentCollection.find(query).toArray();
+      
+      res.send(result);
+    })
+    app.get('/payment/seller/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = { seller_email: email };
+      const result = await paymentCollection.find(query).toArray();
+      
+      res.send(result);
+    })
     app.get('/category', async (req, res) => {
       const cursor = mediCollection.find();
       const result = await cursor.toArray();
@@ -110,6 +130,18 @@ async function run() {
       console.log(req.params.no);
       const result = await mediCollection.find({ no: req.params.no }).toArray();
       res.send(result)
+    })
+
+    app.get('/medidetails', async (req, res) => {
+      const cursor = mediCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get('/medidetails/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const medi = await mediCollection.findOne(query);
+      res.send(medi);
     })
     app.get('/category/seller/:email',async(req,res)=>{
       const email = req.params.email;
@@ -212,6 +244,12 @@ async function run() {
       const newMedi = req.body;
       console.log(newMedi);
       const result = await mediCollection.insertOne(newMedi);
+      res.send(result);
+    })
+    app.post('/payment', async (req, res) => {
+      const newMedi = req.body;
+      console.log(newMedi);
+      const result = await paymentCollection.insertOne(newMedi);
       res.send(result);
     })
 

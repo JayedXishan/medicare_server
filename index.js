@@ -6,17 +6,10 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors(
-  {
-    origin: [
-      "http://localhost:5173",
-],
-}
-));
+app.use(cors());
 app.use(express.json());
 
-
-
+const stripe = require("stripe")('sk_test_51PUn2s02ngvq2SnuFKBKjM1bLerWxswmVhoxokV4K7FjLriuXz8OvPp60NYefVgbqpPi5XD2m4dKKbtYEwbdiTxH00Rivb3wtM');
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.cff0s1a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -38,7 +31,80 @@ async function run() {
     const cartCollection = client.db("MediDB").collection('carts');
     const usercollection = client.db("MediDB").collection('users');
     const bannerCollection = client.db("MediDB").collection('banners');
-    const paymentCollection = client.db("MediDB").collection('payments');
+    const billCollection = client.db("MediDB").collection('payments');
+    const paymentCollection = client.db('MediDB').collection("payment");
+
+
+    // server for the payment gateway Stripe
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price*100)
+
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ['card']
+      });
+    
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+
+
+    app.get('/payment/:email',async(req, res)=>{
+    
+      const query = {email: req.params.email};
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    app.get('/payment', async (req, res) => {
+      const cursor = paymentCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get('/payment/buyer/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = { buyer_email: email };
+      const result = await paymentCollection.find(query).toArray();
+      
+      res.send(result);
+    })
+    app.get('/payment/seller/:email',async(req,res)=>{
+      const email = req.params.email;
+      const query = { seller_email: email };
+      const result = await paymentCollection.find(query).toArray();
+      
+      res.send(result);
+    })
+    app.get('/payment/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const medi = await paymentCollectionCollection.findOne(query);
+      res.send(medi);
+    })
+    app.patch('/payment/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const update = req.body;
+      const updateduser = {
+        $set: {
+          status: update.status
+        }
+      }
+      const result = await paymentCollection.updateOne(filter, updateduser);
+      res.send(result);
+    })
+    // save payment data and clear users cart
+    app.post('/payment',async(req,res) => {
+      const payment  = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+      res.send({paymentResult})
+    })
 
     // JWT related Api
     app.post('/jwt', async (req, res) => {
@@ -83,44 +149,26 @@ async function run() {
       }
       next();
     }
-    // const categoryCollection = client.db("craftDB").collection('category');
-
-    // app.get('/craft', async (req, res) => {
-    //   const cursor = craftCollection.find();
+    
+    // app.get('/payment', async (req, res) => {
+    //   const cursor = billCollection.find();
     //   const result = await cursor.toArray();
     //   res.send(result);
     // })
-    // app.get('/craft/:id', async (req, res) => {
-    //   const id = req.params.id;
-    //   const query = { _id: new ObjectId(id) }
-    //   const craft = await craftCollection.findOne(query);
-    //   res.send(craft);
-    // })
-
-    // app.get("/mycraft/:email", async (req, res) => {
-    //   console.log(req.params.email);
-    //   const result = await craftCollection.find({ email: req.params.email }).toArray();
-    //   res.send(result)
-    // })
-    app.get('/payment', async (req, res) => {
-      const cursor = paymentCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    })
-    app.get('/payment/buyer/:email',async(req,res)=>{
-      const email = req.params.email;
-      const query = { buyer_email: email };
-      const result = await paymentCollection.find(query).toArray();
+    // app.get('/payment/buyer/:email',async(req,res)=>{
+    //   const email = req.params.email;
+    //   const query = { buyer_email: email };
+    //   const result = await billCollection.find(query).toArray();
       
-      res.send(result);
-    })
-    app.get('/payment/seller/:email',async(req,res)=>{
-      const email = req.params.email;
-      const query = { seller_email: email };
-      const result = await paymentCollection.find(query).toArray();
+    //   res.send(result);
+    // })
+    // app.get('/payment/seller/:email',async(req,res)=>{
+    //   const email = req.params.email;
+    //   const query = { seller_email: email };
+    //   const result = await billCollection.find(query).toArray();
       
-      res.send(result);
-    })
+    //   res.send(result);
+    // })
     app.get('/category', async (req, res) => {
       const cursor = mediCollection.find();
       const result = await cursor.toArray();
@@ -150,20 +198,7 @@ async function run() {
       console.log('email :', result);
       res.send(result);
     })
-    // app.get('/categoryNo/:id', async (req, res) => {
-    //   const id = req.params.id;
-    //   const query = { _id: new ObjectId(id) }
-    //   const craft = await categoryCollection.findOne(query);
-    //   res.send(craft);
-    // })
-
-    // // taking obj from client
-    // app.post('/craft', async (req, res) => {
-    //   const newCraft = req.body;
-    //   console.log(newCraft);
-    //   const result = await craftCollection.insertOne(newCraft);
-    //   res.send(result);
-    // })
+    
     app.get('/carts',async(req,res)=>{
       const email =req.query.email;
       const query ={ email: email};
@@ -246,12 +281,12 @@ async function run() {
       const result = await mediCollection.insertOne(newMedi);
       res.send(result);
     })
-    app.post('/payment', async (req, res) => {
-      const newMedi = req.body;
-      console.log(newMedi);
-      const result = await paymentCollection.insertOne(newMedi);
-      res.send(result);
-    })
+    // app.post('/payment', async (req, res) => {
+    //   const newMedi = req.body;
+    //   console.log(newMedi);
+    //   const result = await billCollection.insertOne(newMedi);
+    //   res.send(result);
+    // })
 
     app.post('/carts',async (req,res) =>{
       const cartItem =req.body;
@@ -292,56 +327,7 @@ async function run() {
       const result = await bannerCollection.deleteOne(query);
       res.send(result);
     })
-    // app.put('/craft/:id', async (req, res) => {
-    //   const id = req.params.id;
-    //   const filter = { _id: new ObjectId(id) };
-    //   const options = { upsert: true };
-    //   const updatedCraft = req.body;
-    //   const craft = {
-    //     $set: {
-    //       No: updatedCraft.No,
-    //       name: updatedCraft.name,
-    //       subcategory: updatedCraft.subcategory,
-    //       customization: updatedCraft.customization,
-    //       image: updatedCraft.image,
-    //       price: updatedCraft.price,
-    //       rating: updatedCraft.rating,
-    //       time: updatedCraft.time,
-    //       status: updatedCraft.status,
-    //       description: updatedCraft.description,
-
-    //     }
-    //   }
-
-    //   const result = await craftCollection.updateOne(filter, craft, options);
-    //   res.send(result);
-    // })
-
-    // app.put('/category/:id', async (req, res) => {
-    //   const id = req.params.id;
-    //   const filter = { _id: new ObjectId(id) };
-    //   const options = { upsert: true };
-    //   const updatedCraft = req.body;
-    //   const craft = {
-    //     $set: {
-    //       No: updatedCraft.No,
-    //       name: updatedCraft.name,
-    //       subcategory: updatedCraft.subcategory,
-    //       customization: updatedCraft.customization,
-    //       image: updatedCraft.image,
-    //       price: updatedCraft.price,
-    //       rating: updatedCraft.rating,
-    //       time: updatedCraft.time,
-    //       status: updatedCraft.status,
-    //       description: updatedCraft.description,
-
-    //     }
-    //   }
-
-    //   const result = await categoryCollection.updateOne(filter, craft, options);
-    //   res.send(result);
-    // })
-
+    
 
 
     // Send a ping to confirm a successful connection
